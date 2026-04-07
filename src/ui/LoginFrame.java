@@ -14,7 +14,7 @@ public class LoginFrame extends JFrame {
     private JLabel statusLabel;
 
     public LoginFrame() {
-        setTitle("Project 2 Login");
+        setTitle("Online Retail Database Login");
         setSize(400, 200);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);

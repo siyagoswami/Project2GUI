@@ -1,6 +1,7 @@
 package ui;
 
 import db.DBConnection;
+import ui.LoginFrame;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -17,6 +18,10 @@ public class MainFrame extends JFrame {
     private JButton updateButton;
     private JButton deleteButton;
     private JButton refreshButton;
+    private JButton statsButton;
+    private JButton logoutButton;
+    private JButton viewCustomersButton;
+    private JButton viewCustOrderButton;
     private JTable itemsTable;
     private DefaultTableModel tableModel;
 
@@ -35,6 +40,10 @@ public class MainFrame extends JFrame {
         updateButton = new JButton("Update Item");
         deleteButton = new JButton("Delete Item");
         refreshButton = new JButton("Refresh");
+        statsButton = new JButton("Show Stats");
+        viewCustomersButton = new JButton("View Customers");
+        viewCustOrderButton = new JButton("View Customer Orders");
+        logoutButton = new JButton("Logout");
 
         topPanel.add(searchLabel);
         topPanel.add(searchField);
@@ -43,6 +52,10 @@ public class MainFrame extends JFrame {
         topPanel.add(updateButton);
         topPanel.add(deleteButton);
         topPanel.add(refreshButton);
+        topPanel.add(statsButton);
+        topPanel.add(viewCustomersButton);
+        topPanel.add(viewCustOrderButton);
+        topPanel.add(logoutButton);
 
         String [] columnNames = {
                 "Item ID", "Class ID", "Item Name", "Quantity", "Price", "Description"
@@ -62,6 +75,10 @@ public class MainFrame extends JFrame {
         insertButton.addActionListener(e -> insertItem());
         updateButton.addActionListener(e -> updateItem());
         deleteButton.addActionListener(e -> deleteItem());
+        statsButton.addActionListener(e -> showStats());
+        viewCustomersButton.addActionListener(e -> openCustomerView());
+        viewCustOrderButton.addActionListener(e -> openCustOrderView());
+        logoutButton.addActionListener(e -> logout());
     }
 
     private void loadAllItems() {
@@ -233,6 +250,17 @@ public class MainFrame extends JFrame {
 
             int itemId = Integer.parseInt(itemIdStr.trim());
 
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete item ID " + itemId + "?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+
             String sql = "DELETE FROM dbo.Items WHERE item_id = ?";
 
             try (
@@ -256,5 +284,58 @@ public class MainFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "Error deleting item.");
             ex.printStackTrace();
         }
+    }
+
+    private void showStats() {
+        String sql = "SELECT " +
+                "MAX(price) AS max_price, MIN(price) AS min_price, AVG(price) AS avg_price, " +
+                "MAX(quantity) AS max_quantity, MIN(quantity) AS min_quantity, AVG(quantity) AS avg_quantity " +
+                "FROM dbo.Items";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()
+        ) {
+            if (rs.next()) {
+                double maxPrice = rs.getDouble("max_price");
+                double minPrice = rs.getDouble("min_price");
+                double avgPrice = rs.getDouble("avg_price");
+
+                int maxQuantity = rs.getInt("max_quantity");
+                int minQuantity = rs.getInt("min_quantity");
+                double avgQuantity = rs.getDouble("avg_quantity");
+
+                JOptionPane.showMessageDialog(this,
+                        "Price Statistics:\n" +
+                                "Max Price: " + maxPrice + "\n" +
+                                "Min Price: " + minPrice + "\n" +
+                                "Average Price: " + avgPrice + "\n\n" +
+                                "Quantity Statistics:\n" +
+                                "Max Quantity: " + maxQuantity + "\n" +
+                                "Min Quantity: " + minQuantity + "\n" +
+                                "Average Quantity: " + avgQuantity);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error calculating statistics.");
+            ex.printStackTrace();
+        }
+    }
+
+    private void openCustomerView() {
+        CustomerViewFrame customerViewFrame = new CustomerViewFrame();
+        customerViewFrame.setVisible(true);
+    }
+
+    private void openCustOrderView() {
+        CustomerOrderSummaryFrame customerOrderSummaryFrame = new CustomerOrderSummaryFrame();
+        customerOrderSummaryFrame.setVisible(true);
+    }
+
+    private void logout() {
+        this.dispose(); // close current window
+
+        LoginFrame loginFrame = new LoginFrame();
+        loginFrame.setVisible(true);
     }
 }
