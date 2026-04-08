@@ -14,6 +14,7 @@ import java.sql.Types;
 public class MainFrame extends JFrame {
     private JTextField searchField;
     private JButton searchButton;
+    private JButton orderButton;
     private JButton insertButton;
     private JButton updateButton;
     private JButton deleteButton;
@@ -31,11 +32,15 @@ public class MainFrame extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        getContentPane().setBackground(new Color(245, 247, 250));
 
         JPanel topPanel = new JPanel(new FlowLayout());
+        topPanel.setBackground(new Color(245, 247, 250));
+
         JLabel searchLabel = new JLabel("Search Item Name:");
         searchField = new JTextField(20);
         searchButton = new JButton("Search");
+        orderButton = new JButton("Create Order");
         insertButton = new JButton("Insert Item");
         updateButton = new JButton("Update Item");
         deleteButton = new JButton("Delete Item");
@@ -48,6 +53,7 @@ public class MainFrame extends JFrame {
         topPanel.add(searchLabel);
         topPanel.add(searchField);
         topPanel.add(searchButton);
+        topPanel.add(orderButton);
         topPanel.add(insertButton);
         topPanel.add(updateButton);
         topPanel.add(deleteButton);
@@ -57,20 +63,44 @@ public class MainFrame extends JFrame {
         topPanel.add(viewCustOrderButton);
         topPanel.add(logoutButton);
 
+        JButton[] buttons = {
+                searchButton, orderButton, insertButton, updateButton, deleteButton,
+                refreshButton, statsButton, viewCustomersButton,
+                viewCustOrderButton, logoutButton
+        };
+
+        for (JButton btn : buttons) {
+            btn.setFocusPainted(false);
+            btn.setBackground(new Color(70, 130, 180));
+            btn.setForeground(Color.BLACK);
+            btn.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        }
+
+        searchLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        searchField.setPreferredSize(new Dimension(180, 28));
+
         String [] columnNames = {
                 "Item ID", "Class ID", "Item Name", "Quantity", "Price", "Description"
         };
 
         tableModel = new DefaultTableModel(columnNames, 0);
         itemsTable = new JTable(tableModel);
+        itemsTable.setRowHeight(25);
+        itemsTable.setGridColor(new Color(220, 220, 220));
+        itemsTable.setSelectionBackground(new Color(100, 149, 237));
+        itemsTable.setSelectionForeground(Color.WHITE);
+        itemsTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
+        itemsTable.getTableHeader().setBackground(new Color(230, 236, 245));
 
         JScrollPane scrollPane = new JScrollPane(itemsTable);
+        scrollPane.getViewport().setBackground(Color.WHITE);
         add(topPanel, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
 
         loadAllItems();
 
         searchButton.addActionListener(e -> searchItems());
+        orderButton.addActionListener(e -> openOrderFrame());
         refreshButton.addActionListener(e -> loadAllItems());
         insertButton.addActionListener(e -> insertItem());
         updateButton.addActionListener(e -> updateItem());
@@ -137,6 +167,11 @@ public class MainFrame extends JFrame {
              ex.printStackTrace();
          }
      }
+
+    private void openOrderFrame() {
+        OrderFrame orderFrame = new OrderFrame(this);
+        orderFrame.setVisible(true);
+    }
 
      private void insertItem() {
         try {
@@ -337,5 +372,9 @@ public class MainFrame extends JFrame {
 
         LoginFrame loginFrame = new LoginFrame();
         loginFrame.setVisible(true);
+    }
+
+    public void refreshItemsTable() {
+        loadAllItems();
     }
 }

@@ -18,6 +18,12 @@ public class CustomerOrderSummaryFrame extends JFrame {
         setSize(800, 400);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        getContentPane().setBackground(new Color(245, 247, 250));
+
+        JLabel title = new JLabel("Customer Order Summary");
+        title.setFont(new Font("SansSerif", Font.BOLD, 16));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        title.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
         String[] columns = {
                 "Customer ID", "First Name", "Last Name", "Email", "Total Orders", "Total Spent"
@@ -25,8 +31,18 @@ public class CustomerOrderSummaryFrame extends JFrame {
 
         model = new DefaultTableModel(columns, 0);
         table = new JTable(model);
+        table.setRowHeight(25);
+        table.setGridColor(new Color(220, 220, 220));
+        table.setSelectionBackground(new Color(100, 149, 237));
+        table.setSelectionForeground(Color.BLACK);
+        table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
+        table.getTableHeader().setBackground(new Color(230, 236, 245));
 
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        add(title, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
 
         loadData();
     }

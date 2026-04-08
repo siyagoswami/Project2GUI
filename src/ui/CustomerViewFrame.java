@@ -19,6 +19,12 @@ public class CustomerViewFrame extends JFrame {
         setSize(700, 400);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        getContentPane().setBackground(new Color(245, 247, 250));
+
+        JLabel title = new JLabel("Customer List");
+        title.setFont(new Font("SansSerif", Font.BOLD, 16));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        title.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
         String[] columnNames = {
                 "Customer ID", "First Name", "Last Name", "Email", "Username"
@@ -27,7 +33,17 @@ public class CustomerViewFrame extends JFrame {
         tableModel = new DefaultTableModel(columnNames, 0);
         customerTable = new JTable(tableModel);
 
+        customerTable.setRowHeight(25);
+        customerTable.setGridColor(new Color(220, 220, 220));
+        customerTable.setSelectionBackground(new Color(100, 149, 237));
+        customerTable.setSelectionForeground(Color.BLACK);
+        customerTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
+        customerTable.getTableHeader().setBackground(new Color(230, 236, 245));
+
         JScrollPane scrollPane = new JScrollPane(customerTable);
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        add(title, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
 
         loadCustomers();
