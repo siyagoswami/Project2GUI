@@ -22,7 +22,7 @@ public class LoginFrame extends JFrame {
         getContentPane().setBackground(new Color(245, 247, 250));
 
         JLabel title = new JLabel("Online Retail System");
-        title.setFont(new Font("Arial", Font.BOLD, 18));
+        title.setFont(new Font("SansSerif", Font.BOLD, 18));
         title.setHorizontalAlignment(SwingConstants.CENTER);
         title.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
 
@@ -37,14 +37,14 @@ public class LoginFrame extends JFrame {
         JLabel passwordLabel = new JLabel("Password:");
         passwordField = new JPasswordField();
 
-        usernameLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        passwordLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        usernameLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        passwordLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         usernameField.setPreferredSize(new Dimension(150, 28));
         passwordField.setPreferredSize(new Dimension(150, 28));
 
         loginButton = new JButton("Login");
         loginButton.setBackground(new Color(70, 130, 180));
-        loginButton.setForeground(Color.WHITE);
+        loginButton.setForeground(Color.BLACK);
         loginButton.setFocusPainted(false);
 
         statusLabel = new JLabel("");
@@ -80,8 +80,8 @@ public class LoginFrame extends JFrame {
         String sql = "SELECT * FROM dbo.Customers WHERE username = ? and password = ?";
 
         try (
-            Connection conn = DBConnection.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql);
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
         ) {
             pstmt.setString(1, username);
             pstmt.setString(2, password);

@@ -21,7 +21,7 @@ public class CustomerOrderSummaryFrame extends JFrame {
         getContentPane().setBackground(new Color(245, 247, 250));
 
         JLabel title = new JLabel("Customer Order Summary");
-        title.setFont(new Font("Arial", Font.BOLD, 16));
+        title.setFont(new Font("SansSerif", Font.BOLD, 16));
         title.setHorizontalAlignment(SwingConstants.CENTER);
         title.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
@@ -34,8 +34,8 @@ public class CustomerOrderSummaryFrame extends JFrame {
         table.setRowHeight(25);
         table.setGridColor(new Color(220, 220, 220));
         table.setSelectionBackground(new Color(100, 149, 237));
-        table.setSelectionForeground(Color.WHITE);
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
+        table.setSelectionForeground(Color.BLACK);
+        table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
         table.getTableHeader().setBackground(new Color(230, 236, 245));
 
         JScrollPane scrollPane = new JScrollPane(table);

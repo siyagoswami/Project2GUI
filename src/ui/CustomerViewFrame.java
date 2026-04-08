@@ -22,7 +22,7 @@ public class CustomerViewFrame extends JFrame {
         getContentPane().setBackground(new Color(245, 247, 250));
 
         JLabel title = new JLabel("Customer List");
-        title.setFont(new Font("Arial", Font.BOLD, 16));
+        title.setFont(new Font("SansSerif", Font.BOLD, 16));
         title.setHorizontalAlignment(SwingConstants.CENTER);
         title.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
@@ -36,8 +36,8 @@ public class CustomerViewFrame extends JFrame {
         customerTable.setRowHeight(25);
         customerTable.setGridColor(new Color(220, 220, 220));
         customerTable.setSelectionBackground(new Color(100, 149, 237));
-        customerTable.setSelectionForeground(Color.WHITE);
-        customerTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
+        customerTable.setSelectionForeground(Color.BLACK);
+        customerTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
         customerTable.getTableHeader().setBackground(new Color(230, 236, 245));
 
         JScrollPane scrollPane = new JScrollPane(customerTable);
