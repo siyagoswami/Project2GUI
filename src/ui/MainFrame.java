@@ -23,11 +23,13 @@ public class MainFrame extends JFrame {
     private JButton logoutButton;
     private JButton viewCustomersButton;
     private JButton viewCustOrderButton;
+    private JButton removeOrderButton;
+    private JButton customerOrderDetailsButton;
     private JTable itemsTable;
     private DefaultTableModel tableModel;
 
     public MainFrame() {
-        setTitle("Project 2 Main Window");
+        setTitle("Customer Retail Database");
         setSize(1000, 550);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -46,14 +48,18 @@ public class MainFrame extends JFrame {
         deleteButton = new JButton("Delete Item");
         refreshButton = new JButton("Refresh");
         statsButton = new JButton("Show Stats");
+        customerOrderDetailsButton = new JButton("Customer Order Details");
+        removeOrderButton = new JButton("Remove Order");
         viewCustomersButton = new JButton("View Customers");
         viewCustOrderButton = new JButton("View Customer Orders");
+
         logoutButton = new JButton("Logout");
 
         topPanel.add(searchLabel);
         topPanel.add(searchField);
         topPanel.add(searchButton);
         topPanel.add(orderButton);
+        topPanel.add(removeOrderButton);
         topPanel.add(insertButton);
         topPanel.add(updateButton);
         topPanel.add(deleteButton);
@@ -61,17 +67,17 @@ public class MainFrame extends JFrame {
         topPanel.add(statsButton);
         topPanel.add(viewCustomersButton);
         topPanel.add(viewCustOrderButton);
+        topPanel.add(customerOrderDetailsButton);
         topPanel.add(logoutButton);
 
         JButton[] buttons = {
                 searchButton, orderButton, insertButton, updateButton, deleteButton,
                 refreshButton, statsButton, viewCustomersButton,
-                viewCustOrderButton, logoutButton
+                viewCustOrderButton, customerOrderDetailsButton, removeOrderButton, logoutButton
         };
 
         for (JButton btn : buttons) {
             btn.setFocusPainted(false);
-            btn.setBackground(new Color(70, 130, 180));
             btn.setForeground(Color.BLACK);
             btn.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         }
@@ -108,13 +114,15 @@ public class MainFrame extends JFrame {
         statsButton.addActionListener(e -> showStats());
         viewCustomersButton.addActionListener(e -> openCustomerView());
         viewCustOrderButton.addActionListener(e -> openCustOrderView());
+        customerOrderDetailsButton.addActionListener(e -> showCustomerOrderDetails());
+        removeOrderButton.addActionListener(e -> removeOrder());
         logoutButton.addActionListener(e -> logout());
     }
 
     private void loadAllItems() {
         tableModel.setRowCount(0);
 
-        String sql = "SELECT item_id, class_id, item_name, quantity, price, description FROM dbo.Items";
+        String sql = "SELECT item_id, class_id, item_name, quantity, price, description FROM dbo.Items WHERE is_active = 1";
 
         try (
            Connection conn = DBConnection.getConnection();
@@ -142,8 +150,7 @@ public class MainFrame extends JFrame {
         tableModel.setRowCount(0);
         String keyword = searchField.getText().trim();
 
-        String sql = "SELECT item_id, class_id, item_name, quantity, price, description " +
-                "FROM dbo.Items WHERE item_name LIKE ?";
+        String sql = "SELECT item_id, class_id, item_name, quantity, price, description FROM dbo.Items WHERE is_active = 1 AND item_name LIKE ?";
 
          try (
                  Connection conn = DBConnection.getConnection();
@@ -296,7 +303,7 @@ public class MainFrame extends JFrame {
                 return;
             }
 
-            String sql = "DELETE FROM dbo.Items WHERE item_id = ?";
+            String sql = "UPDATE dbo.Items SET is_active = 0 WHERE item_id = ?";
 
             try (
                     Connection conn = DBConnection.getConnection();
@@ -307,7 +314,7 @@ public class MainFrame extends JFrame {
                 int rowsAffected = pstmt.executeUpdate();
 
                 if (rowsAffected > 0) {
-                    JOptionPane.showMessageDialog(this, "Item deleted successfully.");
+                    JOptionPane.showMessageDialog(this, "Item marked inactive successfully.");
                 } else {
                     JOptionPane.showMessageDialog(this, "No item found with that ID.");
                 }
@@ -365,6 +372,139 @@ public class MainFrame extends JFrame {
     private void openCustOrderView() {
         CustomerOrderSummaryFrame customerOrderSummaryFrame = new CustomerOrderSummaryFrame();
         customerOrderSummaryFrame.setVisible(true);
+    }
+
+    private void showCustomerOrderDetails() {
+        try {
+            String customerIdStr = JOptionPane.showInputDialog(this, "Enter Customer ID:");
+            if (customerIdStr == null || customerIdStr.trim().isEmpty()) return;
+
+            int customerId = Integer.parseInt(customerIdStr.trim());
+
+            String[] columnNames = {
+                    "Order ID", "Order Date", "Item ID", "Item Name",
+                    "Quantity", "Unit Price", "Discount", "Order Total"
+            };
+
+            DefaultTableModel detailsModel = new DefaultTableModel(columnNames, 0);
+            JTable detailsTable = new JTable(detailsModel);
+            detailsTable.setRowHeight(25);
+            detailsTable.setGridColor(new Color(220, 220, 220));
+            detailsTable.setSelectionBackground(new Color(100, 149, 237));
+            detailsTable.setSelectionForeground(Color.WHITE);
+            detailsTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
+            detailsTable.getTableHeader().setBackground(new Color(230, 236, 245));
+
+            String sql = "SELECT o.order_id, o.order_date, i.item_id, i.item_name, " +
+                    "ol.quantity, ol.unit_price, ol.discount, o.total_amount " +
+                    "FROM dbo.Orders o " +
+                    "JOIN dbo.OrderLines ol ON o.order_id = ol.order_id " +
+                    "JOIN dbo.Items i ON ol.item_id = i.item_id " +
+                    "WHERE o.customer_id = ? " +
+                    "ORDER BY o.order_date, o.order_id";
+
+            try (
+                    Connection conn = DBConnection.getConnection();
+                    PreparedStatement pstmt = conn.prepareStatement(sql)
+            ) {
+                pstmt.setInt(1, customerId);
+                ResultSet rs = pstmt.executeQuery();
+
+                boolean found = false;
+
+                while (rs.next()) {
+                    found = true;
+                    Object[] row = {
+                            rs.getInt("order_id"),
+                            rs.getDate("order_date"),
+                            rs.getInt("item_id"),
+                            rs.getString("item_name"),
+                            rs.getInt("quantity"),
+                            rs.getDouble("unit_price"),
+                            rs.getObject("discount"),
+                            rs.getDouble("total_amount")
+                    };
+                    detailsModel.addRow(row);
+                }
+
+                if (!found) {
+                    JOptionPane.showMessageDialog(this, "No orders found for that customer.");
+                    return;
+                }
+            }
+
+            JScrollPane scrollPane = new JScrollPane(detailsTable);
+            scrollPane.setPreferredSize(new Dimension(900, 250));
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    scrollPane,
+                    "Customer Order Details",
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error loading customer order details.");
+            ex.printStackTrace();
+        }
+    }
+
+    private void removeOrder() {
+        try {
+            String orderIdStr = JOptionPane.showInputDialog(this, "Enter Order ID to remove:");
+            if (orderIdStr == null || orderIdStr.trim().isEmpty()) return;
+
+            int orderId = Integer.parseInt(orderIdStr.trim());
+
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to remove order ID " + orderId + "?",
+                    "Confirm Remove Order",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            String deleteOrderLinesSql = "DELETE FROM dbo.OrderLines WHERE order_id = ?";
+            String deleteOrderSql = "DELETE FROM dbo.Orders WHERE order_id = ?";
+
+            try (
+                    Connection conn = DBConnection.getConnection();
+                    PreparedStatement deleteOrderLinesStmt = conn.prepareStatement(deleteOrderLinesSql);
+                    PreparedStatement deleteOrderStmt = conn.prepareStatement(deleteOrderSql)
+            ) {
+                conn.setAutoCommit(false);
+
+                try {
+                    deleteOrderLinesStmt.setInt(1, orderId);
+                    deleteOrderLinesStmt.executeUpdate();
+
+                    deleteOrderStmt.setInt(1, orderId);
+                    int rowsAffected = deleteOrderStmt.executeUpdate();
+
+                    if (rowsAffected > 0) {
+                        conn.commit();
+                        JOptionPane.showMessageDialog(this, "Order removed successfully.");
+                        loadAllItems();
+                    } else {
+                        conn.rollback();
+                        JOptionPane.showMessageDialog(this, "No order found with that ID.");
+                    }
+
+                } catch (Exception ex) {
+                    conn.rollback();
+                    throw ex;
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            }
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error removing order.");
+            ex.printStackTrace();
+        }
     }
 
     private void logout() {

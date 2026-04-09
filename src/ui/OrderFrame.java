@@ -153,7 +153,7 @@ public class OrderFrame extends JFrame {
     private void loadItems() {
         itemComboBox.removeAllItems();
 
-        String sql = "SELECT item_id, item_name, price, quantity FROM dbo.Items ORDER BY item_id";
+        String sql = "SELECT item_id, item_name, price, quantity FROM dbo.Items WHERE is_active = 1 ORDER BY item_id";
 
         try (
                 Connection conn = DBConnection.getConnection();
