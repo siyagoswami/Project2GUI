@@ -1,7 +1,6 @@
 package ui;
 
 import db.DBConnection;
-import ui.LoginFrame;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -9,12 +8,12 @@ import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Types;
 
 public class MainFrame extends JFrame {
     private JTextField searchField;
     private JButton searchButton;
     private JButton orderButton;
+    private JButton updateOrderButton;
     private JButton insertButton;
     private JButton updateButton;
     private JButton deleteButton;
@@ -30,7 +29,7 @@ public class MainFrame extends JFrame {
 
     public MainFrame() {
         setTitle("Customer Retail Database");
-        setSize(1000, 550);
+        setSize(1100, 550);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -43,6 +42,7 @@ public class MainFrame extends JFrame {
         searchField = new JTextField(20);
         searchButton = new JButton("Search");
         orderButton = new JButton("Create Order");
+        updateOrderButton = new JButton("Update Order");
         insertButton = new JButton("Insert Item");
         updateButton = new JButton("Update Item");
         deleteButton = new JButton("Delete Item");
@@ -52,13 +52,13 @@ public class MainFrame extends JFrame {
         removeOrderButton = new JButton("Remove Order");
         viewCustomersButton = new JButton("View Customers");
         viewCustOrderButton = new JButton("View Customer Orders");
-
         logoutButton = new JButton("Logout");
 
         topPanel.add(searchLabel);
         topPanel.add(searchField);
         topPanel.add(searchButton);
         topPanel.add(orderButton);
+        topPanel.add(updateOrderButton);
         topPanel.add(removeOrderButton);
         topPanel.add(insertButton);
         topPanel.add(updateButton);
@@ -71,7 +71,7 @@ public class MainFrame extends JFrame {
         topPanel.add(logoutButton);
 
         JButton[] buttons = {
-                searchButton, orderButton, insertButton, updateButton, deleteButton,
+                searchButton, orderButton, updateOrderButton, insertButton, updateButton, deleteButton,
                 refreshButton, statsButton, viewCustomersButton,
                 viewCustOrderButton, customerOrderDetailsButton, removeOrderButton, logoutButton
         };
@@ -85,7 +85,7 @@ public class MainFrame extends JFrame {
         searchLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         searchField.setPreferredSize(new Dimension(180, 28));
 
-        String [] columnNames = {
+        String[] columnNames = {
                 "Item ID", "Class ID", "Item Name", "Quantity", "Price", "Description"
         };
 
@@ -107,6 +107,7 @@ public class MainFrame extends JFrame {
 
         searchButton.addActionListener(e -> searchItems());
         orderButton.addActionListener(e -> openOrderFrame());
+        updateOrderButton.addActionListener(e -> updateOrder());
         refreshButton.addActionListener(e -> loadAllItems());
         insertButton.addActionListener(e -> insertItem());
         updateButton.addActionListener(e -> updateItem());
@@ -125,18 +126,18 @@ public class MainFrame extends JFrame {
         String sql = "SELECT item_id, class_id, item_name, quantity, price, description FROM dbo.Items WHERE is_active = 1";
 
         try (
-           Connection conn = DBConnection.getConnection();
-           PreparedStatement pstmt = conn.prepareStatement(sql);
-           ResultSet rs = pstmt.executeQuery()
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()
         ) {
             while (rs.next()) {
                 Object[] row = {
-                    rs.getInt("item_id"),
-                    rs.getObject("class_id"),
-                    rs.getString("item_name"),
-                    rs.getInt("quantity"),
-                    rs.getDouble("price"),
-                    rs.getString("description")
+                        rs.getInt("item_id"),
+                        rs.getObject("class_id"),
+                        rs.getString("item_name"),
+                        rs.getInt("quantity"),
+                        rs.getDouble("price"),
+                        rs.getString("description")
                 };
                 tableModel.addRow(row);
             }
@@ -146,41 +147,346 @@ public class MainFrame extends JFrame {
         }
     }
 
-     private void searchItems() {
+    private void searchItems() {
         tableModel.setRowCount(0);
         String keyword = searchField.getText().trim();
 
         String sql = "SELECT item_id, class_id, item_name, quantity, price, description FROM dbo.Items WHERE is_active = 1 AND item_name LIKE ?";
 
-         try (
-                 Connection conn = DBConnection.getConnection();
-                 PreparedStatement pstmt = conn.prepareStatement(sql)
-         ) {
-             pstmt.setString(1, "%" + keyword + "%");
-             ResultSet rs = pstmt.executeQuery();
-             while (rs.next()) {
-                 Object[] row = {
-                         rs.getInt("item_id"),
-                         rs.getObject("class_id"),
-                         rs.getString("item_name"),
-                         rs.getInt("quantity"),
-                         rs.getDouble("price"),
-                         rs.getString("description")
-                 };
-                 tableModel.addRow(row);
-             }
-         } catch (Exception ex) {
-             JOptionPane.showMessageDialog(this, "Error loading items.");
-             ex.printStackTrace();
-         }
-     }
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)
+        ) {
+            pstmt.setString(1, "%" + keyword + "%");
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                Object[] row = {
+                        rs.getInt("item_id"),
+                        rs.getObject("class_id"),
+                        rs.getString("item_name"),
+                        rs.getInt("quantity"),
+                        rs.getDouble("price"),
+                        rs.getString("description")
+                };
+                tableModel.addRow(row);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error loading items.");
+            ex.printStackTrace();
+        }
+    }
 
     private void openOrderFrame() {
         OrderFrame orderFrame = new OrderFrame(this);
         orderFrame.setVisible(true);
     }
 
-     private void insertItem() {
+    private void updateOrder() {
+        try {
+            String orderIdStr = JOptionPane.showInputDialog(this, "Enter Order ID to update:");
+            if (orderIdStr == null || orderIdStr.trim().isEmpty()) return;
+
+            int orderId = Integer.parseInt(orderIdStr.trim());
+
+            if (!orderExists(orderId)) {
+                JOptionPane.showMessageDialog(this, "No order found with that ID.");
+                return;
+            }
+
+            showOrderLines(orderId);
+
+            String[] options = {"Update Existing Item", "Add New Item", "Remove Item"};
+            String choice = (String) JOptionPane.showInputDialog(
+                    this,
+                    "Choose what you want to do:",
+                    "Update Order",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    options,
+                    options[0]
+            );
+
+            if (choice == null) return;
+
+            try (Connection conn = DBConnection.getConnection()) {
+                conn.setAutoCommit(false);
+
+                try {
+                    if (choice.equals("Update Existing Item")) {
+                        updateExistingOrderLine(conn, orderId);
+                    } else if (choice.equals("Add New Item")) {
+                        addNewOrderLine(conn, orderId);
+                    } else {
+                        removeExistingOrderLine(conn, orderId);
+                    }
+
+                    updateOrderTotal(conn, orderId);
+                    conn.commit();
+                    JOptionPane.showMessageDialog(this, "Order updated successfully.");
+                    loadAllItems();
+                    showOrderLines(orderId);
+
+                } catch (Exception ex) {
+                    conn.rollback();
+                    JOptionPane.showMessageDialog(this, "Order update failed: " + ex.getMessage());
+                    ex.printStackTrace();
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            }
+
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid numeric Order ID.");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error updating order.");
+            ex.printStackTrace();
+        }
+    }
+
+    private boolean orderExists(int orderId) throws Exception {
+        String sql = "SELECT 1 FROM dbo.Orders WHERE order_id = ?";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)
+        ) {
+            pstmt.setInt(1, orderId);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        }
+    }
+
+    private void showOrderLines(int orderId) throws Exception {
+        String[] columnNames = {"Item ID", "Item Name", "Quantity", "Unit Price", "Discount"};
+        DefaultTableModel detailsModel = new DefaultTableModel(columnNames, 0);
+        JTable detailsTable = new JTable(detailsModel);
+
+        String sql = "SELECT ol.item_id, i.item_name, ol.quantity, ol.unit_price, ol.discount " +
+                "FROM dbo.OrderLines ol " +
+                "JOIN dbo.Items i ON ol.item_id = i.item_id " +
+                "WHERE ol.order_id = ? ORDER BY ol.item_id";
+
+        try (
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)
+        ) {
+            pstmt.setInt(1, orderId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                Object[] row = {
+                        rs.getInt("item_id"),
+                        rs.getString("item_name"),
+                        rs.getInt("quantity"),
+                        rs.getDouble("unit_price"),
+                        rs.getObject("discount")
+                };
+                detailsModel.addRow(row);
+            }
+        }
+
+        JScrollPane scrollPane = new JScrollPane(detailsTable);
+        scrollPane.setPreferredSize(new Dimension(650, 180));
+
+        JOptionPane.showMessageDialog(
+                this,
+                scrollPane,
+                "Current Items In Order " + orderId,
+                JOptionPane.PLAIN_MESSAGE
+        );
+    }
+
+    private void updateExistingOrderLine(Connection conn, int orderId) throws Exception {
+        String itemIdStr = JOptionPane.showInputDialog(this, "Enter Item ID already in the order:");
+        if (itemIdStr == null || itemIdStr.trim().isEmpty()) {
+            throw new Exception("Update cancelled.");
+        }
+
+        int itemId = Integer.parseInt(itemIdStr.trim());
+
+        if (!orderLineExists(conn, orderId, itemId)) {
+            throw new Exception("That item is not in this order.");
+        }
+
+        String quantityStr = JOptionPane.showInputDialog(this, "Enter new quantity:");
+        if (quantityStr == null || quantityStr.trim().isEmpty()) {
+            throw new Exception("Update cancelled.");
+        }
+
+        String discountStr = JOptionPane.showInputDialog(this, "Enter new discount (use 0 if none):");
+        if (discountStr == null || discountStr.trim().isEmpty()) {
+            throw new Exception("Update cancelled.");
+        }
+
+        int quantity = Integer.parseInt(quantityStr.trim());
+        double discount = Double.parseDouble(discountStr.trim());
+
+        if (quantity <= 0) {
+            throw new Exception("Quantity must be greater than 0.");
+        }
+
+        int stock = getItemStock(conn, itemId);
+        if (quantity > stock) {
+            throw new Exception("Not enough stock available.");
+        }
+
+        String sql = "UPDATE dbo.OrderLines SET quantity = ?, discount = ? WHERE order_id = ? AND item_id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, quantity);
+            pstmt.setDouble(2, discount);
+            pstmt.setInt(3, orderId);
+            pstmt.setInt(4, itemId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    private void addNewOrderLine(Connection conn, int orderId) throws Exception {
+        String itemIdStr = JOptionPane.showInputDialog(this, "Enter new Item ID to add:");
+        if (itemIdStr == null || itemIdStr.trim().isEmpty()) {
+            throw new Exception("Add cancelled.");
+        }
+
+        int itemId = Integer.parseInt(itemIdStr.trim());
+
+        if (!itemExists(conn, itemId)) {
+            throw new Exception("No item found with that Item ID.");
+        }
+
+        if (orderLineExists(conn, orderId, itemId)) {
+            throw new Exception("That item is already in the order.");
+        }
+
+        String quantityStr = JOptionPane.showInputDialog(this, "Enter quantity:");
+        if (quantityStr == null || quantityStr.trim().isEmpty()) {
+            throw new Exception("Add cancelled.");
+        }
+
+        String discountStr = JOptionPane.showInputDialog(this, "Enter discount (use 0 if none):");
+        if (discountStr == null || discountStr.trim().isEmpty()) {
+            throw new Exception("Add cancelled.");
+        }
+
+        int quantity = Integer.parseInt(quantityStr.trim());
+        double discount = Double.parseDouble(discountStr.trim());
+        double unitPrice = getItemPrice(conn, itemId);
+
+        if (quantity <= 0) {
+            throw new Exception("Quantity must be greater than 0.");
+        }
+
+        int stock = getItemStock(conn, itemId);
+        if (quantity > stock) {
+            throw new Exception("Not enough stock available.");
+        }
+
+        String sql = "INSERT INTO dbo.OrderLines (order_id, item_id, quantity, unit_price, discount) VALUES (?, ?, ?, ?, ?)";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            pstmt.setInt(2, itemId);
+            pstmt.setInt(3, quantity);
+            pstmt.setDouble(4, unitPrice);
+            pstmt.setDouble(5, discount);
+            pstmt.executeUpdate();
+        }
+    }
+
+    private void removeExistingOrderLine(Connection conn, int orderId) throws Exception {
+        String itemIdStr = JOptionPane.showInputDialog(this, "Enter Item ID to remove from the order:");
+        if (itemIdStr == null || itemIdStr.trim().isEmpty()) {
+            throw new Exception("Remove cancelled.");
+        }
+
+        int itemId = Integer.parseInt(itemIdStr.trim());
+
+        if (!orderLineExists(conn, orderId, itemId)) {
+            throw new Exception("That item is not in this order.");
+        }
+
+        String sql = "DELETE FROM dbo.OrderLines WHERE order_id = ? AND item_id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            pstmt.setInt(2, itemId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    private boolean orderLineExists(Connection conn, int orderId, int itemId) throws Exception {
+        String sql = "SELECT 1 FROM dbo.OrderLines WHERE order_id = ? AND item_id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            pstmt.setInt(2, itemId);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        }
+    }
+
+    private boolean itemExists(Connection conn, int itemId) throws Exception {
+        String sql = "SELECT 1 FROM dbo.Items WHERE item_id = ? AND is_active = 1";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, itemId);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        }
+    }
+
+    private double getItemPrice(Connection conn, int itemId) throws Exception {
+        String sql = "SELECT price FROM dbo.Items WHERE item_id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, itemId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble("price");
+            }
+        }
+
+        throw new Exception("Unable to find item price.");
+    }
+
+    private int getItemStock(Connection conn, int itemId) throws Exception {
+        String sql = "SELECT quantity FROM dbo.Items WHERE item_id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, itemId);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("quantity");
+            }
+        }
+
+        throw new Exception("Item not found.");
+    }
+
+    private void updateOrderTotal(Connection conn, int orderId) throws Exception {
+        String totalSql = "SELECT ISNULL(SUM((quantity * unit_price) - ISNULL(discount, 0)), 0) AS new_total " +
+                "FROM dbo.OrderLines WHERE order_id = ?";
+
+        double newTotal = 0.0;
+
+        try (PreparedStatement totalStmt = conn.prepareStatement(totalSql)) {
+            totalStmt.setInt(1, orderId);
+            ResultSet rs = totalStmt.executeQuery();
+            if (rs.next()) {
+                newTotal = rs.getDouble("new_total");
+            }
+        }
+
+        String updateSql = "UPDATE dbo.Orders SET total_amount = ? WHERE order_id = ?";
+
+        try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+            updateStmt.setDouble(1, newTotal);
+            updateStmt.setInt(2, orderId);
+            updateStmt.executeUpdate();
+        }
+    }
+
+    private void insertItem() {
         try {
             String itemIdStr = JOptionPane.showInputDialog(this, "Enter Item ID:");
             if(itemIdStr == null) return;
@@ -205,12 +511,11 @@ public class MainFrame extends JFrame {
             int quantity = Integer.parseInt(quantityStr.trim());
             double price = Double.parseDouble(priceStr.trim());
 
-            String sql = "INSERT INTO dbo.Items (item_id, class_id, item_name, quantity, price, description) " +
-                    "VALUES (?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO dbo.Items (item_id, class_id, item_name, quantity, price, description) VALUES (?, ?, ?, ?, ?, ?)";
 
             try (
-              Connection conn = DBConnection.getConnection();
-              PreparedStatement pstmt = conn.prepareStatement(sql);
+                    Connection conn = DBConnection.getConnection();
+                    PreparedStatement pstmt = conn.prepareStatement(sql)
             ) {
                 pstmt.setInt(1, itemId);
                 if(classId == null) {
@@ -232,7 +537,7 @@ public class MainFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "Error inserting item.");
             ex.printStackTrace();
         }
-     }
+    }
 
     private void updateItem() {
         try {
@@ -255,8 +560,7 @@ public class MainFrame extends JFrame {
             int newQuantity = Integer.parseInt(newQuantityStr.trim());
             double newPrice = Double.parseDouble(newPriceStr.trim());
 
-            String sql = "UPDATE dbo.Items SET item_name = ?, quantity = ?, price = ?, description = ? " +
-                    "WHERE item_id = ?";
+            String sql = "UPDATE dbo.Items SET item_name = ?, quantity = ?, price = ?, description = ? WHERE item_id = ?";
 
             try (
                     Connection conn = DBConnection.getConnection();
@@ -508,7 +812,7 @@ public class MainFrame extends JFrame {
     }
 
     private void logout() {
-        this.dispose(); // close current window
+        this.dispose();
 
         LoginFrame loginFrame = new LoginFrame();
         loginFrame.setVisible(true);
